@@ -15,7 +15,8 @@ contract CoinFlip is VRFConsumerBaseV2 {
     /*   Events   */
     ////////////////
     event FlipRequested();
-    event CoinFlippedAndWon(uint256 indexed requestId, uint256 indexed amount, address player);
+    event CoinFlipped(uint256 indexed requestId, uint256 indexed amount, address player);
+    event CoinFlippedAndLose(uint256 indexed requestId, uint256 indexed amount, address player);
 
     /////////////////////////
     /*   State Variables   */
@@ -26,6 +27,7 @@ contract CoinFlip is VRFConsumerBaseV2 {
     }
 
     Side private s_choice;
+    bool private didWin;
 
     /* Constants */
     uint256 private constant MINIMUM_BET = 0.01 ether;
@@ -78,13 +80,14 @@ contract CoinFlip is VRFConsumerBaseV2 {
 
     function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
         if (Side(randomWords[0] % 2) == s_choice) {
-            // Player wins
-            // Transfer the winnings to the player
             (bool success,) = payable(msg.sender).call{value: address(this).balance * 2}("");
             if (!success) {
                 revert CoinFlip__TransferFailed();
             }
-            emit CoinFlippedAndWon(requestId, address(this).balance, msg.sender);
+            didWin = true;
+        } else {
+            didWin = false;
         }
+        emit CoinFlipped(requestId, address(this).balance, msg.sender);
     }
 }
